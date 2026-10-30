@@ -1,0 +1,76 @@
+{
+  "timestamp": "2026-10-29T17:41:13.185804+00:00",
+  "data_source": "mongo",
+  "n_train": 9600,
+  "n_test": 2400,
+  "random_seed": 42,
+  "classifier": {
+    "model_type": "classifier",
+    "model_name": "RandomForestClassifier",
+    "model_version": "1.0.0",
+    "target": "label",
+    "n_train": 9600,
+    "n_test": 2400,
+    "class_distribution": {
+      "train": {
+        "0": 7110,
+        "1": 2490
+      },
+      "test": {
+        "0": 1778,
+        "1": 622
+      }
+    },
+    "metrics": {
+      "accuracy": 0.9642,
+      "precision": 0.982,
+      "recall": 0.8778,
+      "f1": 0.927
+    },
+    "confusion_matrix": [
+      [
+        1768,
+        10
+      ],
+      [
+        76,
+        546
+      ]
+    ],
+    "baseline": {
+      "strategy": "most_frequent",
+      "accuracy": 0.7408,
+      "f1": 0.0,
+      "comment": "Shows why accuracy alone is deceptive: a baseline predicting always benign achieves 74.1% accuracy despite zero attack detection capability."
+    }
+  },
+  "regressor": {
+    "model_type": "regressor",
+    "model_name": "RandomForestRegressor",
+    "model_version": "1.0.0",
+    "target": "total_bytes",
+    "n_train": 9600,
+    "n_test": 2400,
+    "metrics": {
+      "r2": 0.8954,
+      "mae": 42383.86
+    },
+    "baseline": {
+      "strategy": "mean",
+      "r2": -0.0017,
+      "mae": 258411.06
+    },
+    "mandatory_disclosure": "Bytes are generated from packet counts and service packet sizes, so a high R2 partly reflects the generator structure and verifies the data/ML pipeline integrity, rather than real-world payload prediction skill."
+  },
+  "plots": {
+    "confusion_matrix": "C:\\Users\\hp\\Desktop\\CSE494\\outputs\\confusion_matrix.png",
+    "classifier_feature_importance": "C:\\Users\\hp\\Desktop\\CSE494\\outputs\\classifier_feature_importance.png",
+    "regressor_actual_vs_predicted": "C:\\Users\\hp\\Desktop\\CSE494\\outputs\\regressor_actual_vs_predicted.png"
+  },
+  "library_versions": {
+    "sklearn": "1.9.1",
+    "numpy": "2.5.4",
+    "pandas": "3.1.0",
+    "matplotlib": "3.11.2"
+  }
+}

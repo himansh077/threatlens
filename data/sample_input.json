@@ -1,0 +1,14 @@
+{
+  "duration": 7.5689,
+  "src_packets": 72,
+  "dst_packets": 80,
+  "dst_port": 31303,
+  "ttl": 128,
+  "failed_logins": 0,
+  "syn_flag_ratio": 0.0189,
+  "unique_dst_ports": 1,
+  "conn_rate": 7.96,
+  "protocol": "tcp",
+  "service": "other",
+  "state": "established"
+}
