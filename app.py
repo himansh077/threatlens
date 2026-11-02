@@ -1,10 +1,10 @@
-"""ThreatLens AI - Enterprise SOC Web Interface.
+"""ThreatLens AI - Enterprise Security Operations & Threat Intelligence Console.
 
-Provides a modern, high-performance security operations center dashboard for:
-- Real-Time Network Threat Scoring & Bandwidth Estimation (Live Inference)
-- Idempotent MongoDB Flow Telemetry Explorer & BSON Inspector (Records)
-- Dual Scikit-Learn Model Performance Diagnostics & Benchmarks (Metrics)
-- Server-Side MongoDB Aggregation Pipelines & B-Tree Index Explorer (DB Queries)
+A modern, high-fidelity security platform providing:
+- Real-Time Flow Telemetry Threat Scoring & Bandwidth Estimation (Live Inference)
+- Idempotent MongoDB Flow Telemetry Explorer & BSON Document Inspector (Records)
+- Dual Scikit-Learn Model Performance Diagnostics & Baselines (Metrics)
+- Server-Side MongoDB Aggregation Pipelines & B-Tree Index Explorer (Query Lab)
 """
 
 from datetime import datetime, timezone
@@ -37,144 +37,278 @@ from src.database import (
 from src.predict import load_models, predict_batch, predict_one
 
 # ==============================================================================
-# PAGE CONFIGURATION & STYLING
+# PAGE CONFIGURATION
 # ==============================================================================
 st.set_page_config(
-    page_title="ThreatLens AI | Security Operations Center",
-    page_icon="🛡️",
+    page_title="ThreatLens AI • Threat Intelligence Console",
+    page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# Custom High-End Cyber Dark Theme & Glassmorphism CSS
-CUSTOM_CSS = """
+# ==============================================================================
+# ADVANCED CYBER OBSIDIAN THEME & GLASSMORPHISM STYLING
+# ==============================================================================
+CUSTOM_THEME_CSS = """
 <style>
-/* Global App Canvas */
-.stApp {
-    background: radial-gradient(circle at 15% 15%, rgba(6, 182, 212, 0.04) 0%, transparent 40%),
-                radial-gradient(circle at 85% 85%, rgba(59, 130, 246, 0.04) 0%, transparent 40%),
-                #0a0e17;
-    color: #e2e8f0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+/* Base Canvas */
+html, body, [data-testid="stAppViewContainer"] {
+    font-family: 'Plus Jakarta Sans', -apple-system, sans-serif !important;
+    background-color: #07090e !important;
+    background-image: 
+        radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.08) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(56, 189, 248, 0.06) 0px, transparent 50%),
+        radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.04) 0px, transparent 50%);
+    background-attachment: fixed;
+    color: #f1f5f9;
 }
 
 /* Header & Typography */
-h1, h2, h3, h4 {
-    color: #f8fafc !important;
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
     font-weight: 700 !important;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.025em !important;
 }
 
-/* Sleek Cyber Card Containers */
-.cyber-card {
-    background: rgba(17, 24, 39, 0.75);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(10px);
-    transition: border-color 0.2s ease, transform 0.2s ease;
-}
-.cyber-card:hover {
-    border-color: rgba(6, 182, 212, 0.35);
-}
-
-/* Status Badges */
-.status-pill-online {
-    display: inline-flex;
+/* Brand Title Gradient */
+.brand-title {
+    background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 50%, #94a3b8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 800;
+    font-size: 2.1rem;
+    letter-spacing: -0.03em;
+    display: flex;
     align-items: center;
-    background: rgba(16, 185, 129, 0.15);
-    color: #10b981;
-    border: 1px solid rgba(16, 185, 129, 0.3);
-    border-radius: 9999px;
-    padding: 4px 12px;
-    font-size: 0.82rem;
-    font-weight: 600;
+    gap: 10px;
 }
-.status-pill-offline {
-    display: inline-flex;
-    align-items: center;
-    background: rgba(239, 68, 68, 0.15);
-    color: #ef4444;
-    border: 1px solid rgba(239, 68, 68, 0.3);
-    border-radius: 9999px;
-    padding: 4px 12px;
-    font-size: 0.82rem;
-    font-weight: 600;
-}
-
-/* Threat Score Banner */
-.threat-banner-malicious {
-    background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(185, 28, 28, 0.08) 100%);
-    border: 1px solid rgba(239, 68, 68, 0.4);
-    border-left: 6px solid #ef4444;
-    border-radius: 10px;
-    padding: 16px 20px;
-    margin: 15px 0;
-    box-shadow: 0 0 25px -5px rgba(239, 68, 68, 0.25);
-}
-.threat-banner-benign {
-    background: linear-gradient(135deg, rgba(16, 185, 129, 0.18) 0%, rgba(5, 150, 105, 0.08) 100%);
-    border: 1px solid rgba(16, 185, 129, 0.35);
-    border-left: 6px solid #10b981;
-    border-radius: 10px;
-    padding: 16px 20px;
-    margin: 15px 0;
-    box-shadow: 0 0 25px -5px rgba(16, 185, 129, 0.2);
-}
-
-/* KPI Stat Metric Cards */
-.kpi-container {
-    background: rgba(17, 24, 39, 0.6);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 10px;
-    padding: 14px 18px;
-    text-align: left;
-}
-.kpi-title {
-    font-size: 0.78rem;
-    color: #94a3b8;
+.brand-badge {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.25) 0%, rgba(56, 189, 248, 0.25) 100%);
+    border: 1px solid rgba(99, 102, 241, 0.4);
+    color: #c7d2fe;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
     text-transform: uppercase;
+    letter-spacing: 0.06em;
+    vertical-align: middle;
+}
+
+/* Hero Glass Card */
+.hero-glass {
+    background: linear-gradient(180deg, rgba(17, 24, 39, 0.7) 0%, rgba(15, 23, 42, 0.5) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 16px;
+    padding: 22px 26px;
+    margin-bottom: 24px;
+    backdrop-filter: blur(16px);
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.6);
+}
+
+/* Pulse Heartbeat Radar Animation */
+@keyframes pulseGlow {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+.pulse-dot {
+    width: 9px;
+    height: 9px;
+    background-color: #10b981;
+    border-radius: 50%;
+    display: inline-block;
+    animation: pulseGlow 2s infinite;
+    margin-right: 6px;
+}
+
+/* Metric Strip Cards */
+.metric-tile {
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.75) 0%, rgba(15, 23, 42, 0.4) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+    padding: 16px 20px;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+.metric-tile::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 3px;
+    height: 100%;
+    background: linear-gradient(180deg, #6366f1, #38bdf8);
+}
+.metric-tile:hover {
+    border-color: rgba(99, 102, 241, 0.35);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.5);
+}
+.metric-tile-title {
+    font-size: 0.75rem;
     font-weight: 600;
+    text-transform: uppercase;
+    color: #94a3b8;
     letter-spacing: 0.05em;
     margin-bottom: 4px;
 }
-.kpi-value {
-    font-size: 1.65rem;
-    font-weight: 700;
-    color: #f8fafc;
+.metric-tile-value {
+    font-size: 1.7rem;
+    font-weight: 800;
+    color: #ffffff;
     line-height: 1.2;
 }
-.kpi-sub {
+.metric-tile-sub {
     font-size: 0.76rem;
-    color: #06b6d4;
+    color: #38bdf8;
     margin-top: 4px;
+    font-weight: 500;
 }
 
-/* Preset Pill Buttons */
-div[data-testid="stHorizontalBlock"] button {
-    border-radius: 8px;
-    transition: all 0.15s ease-in-out;
+/* Threat Verdict Alert Cards */
+.verdict-malicious {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.16) 0%, rgba(153, 27, 27, 0.08) 100%);
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    border-radius: 14px;
+    padding: 22px 24px;
+    margin: 20px 0;
+    box-shadow: 0 0 35px -8px rgba(239, 68, 68, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+.verdict-malicious::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; width: 6px; height: 100%;
+    background: #ef4444;
 }
 
-/* Tabs Styling */
-button[data-baseweb="tab"] {
-    font-size: 0.95rem !important;
+.verdict-benign {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.16) 0%, rgba(5, 150, 105, 0.08) 100%);
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    border-radius: 14px;
+    padding: 22px 24px;
+    margin: 20px 0;
+    box-shadow: 0 0 35px -8px rgba(16, 185, 129, 0.25);
+    position: relative;
+    overflow: hidden;
+}
+.verdict-benign::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; width: 6px; height: 100%;
+    background: #10b981;
+}
+
+/* Feature Panel Glass Container */
+.panel-glass {
+    background: rgba(15, 23, 42, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 16px;
+    backdrop-filter: blur(8px);
+}
+.panel-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #e2e8f0;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Streamlit Tabs Customization */
+[data-baseweb="tab-list"] {
+    gap: 8px !important;
+    background-color: transparent !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+    padding-bottom: 4px !important;
+}
+[data-baseweb="tab"] {
+    background: rgba(15, 23, 42, 0.4) !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    border-radius: 8px 8px 0 0 !important;
+    color: #94a3b8 !important;
     font-weight: 600 !important;
-    padding-top: 10px !important;
-    padding-bottom: 10px !important;
+    font-size: 0.92rem !important;
+    padding: 10px 18px !important;
+    transition: all 0.2s ease !important;
+}
+[data-baseweb="tab"]:hover {
+    color: #f1f5f9 !important;
+    background: rgba(30, 41, 59, 0.5) !important;
+    border-color: rgba(99, 102, 241, 0.3) !important;
+}
+[aria-selected="true"] {
+    background: linear-gradient(180deg, rgba(99, 102, 241, 0.15) 0%, rgba(15, 23, 42, 0.6) 100%) !important;
+    border-color: rgba(99, 102, 241, 0.5) !important;
+    border-bottom: 2px solid #6366f1 !important;
+    color: #ffffff !important;
+}
+
+/* Buttons */
+.stButton > button {
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    letter-spacing: -0.01em !important;
+    transition: all 0.2s ease !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+.stButton > button:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Primary Action Button */
+button[kind="primary"] {
+    background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%) !important;
+    border: none !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 14px rgba(79, 70, 229, 0.4) !important;
+}
+button[kind="primary"]:hover {
+    box-shadow: 0 6px 20px rgba(79, 70, 229, 0.6) !important;
+}
+
+/* Form Inputs Styling */
+div[data-baseweb="select"] > div, 
+div[data-baseweb="input"] > div, 
+div[data-testid="stNumberInputContainer"] {
+    background-color: rgba(15, 23, 42, 0.8) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 8px !important;
+    color: #f1f5f9 !important;
+}
+div[data-baseweb="select"]:hover, div[data-baseweb="input"]:hover {
+    border-color: rgba(99, 102, 241, 0.4) !important;
+}
+
+/* Code & Json Inspector */
+pre, code {
+    font-family: 'JetBrains Mono', monospace !important;
+    background-color: rgba(10, 15, 26, 0.8) !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    border-radius: 8px !important;
 }
 </style>
 """
-st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
+st.markdown(CUSTOM_THEME_CSS, unsafe_allow_html=True)
 
 # ==============================================================================
-# TELEMETRY ATTACK PRESETS
+# ATTACK & BENIGN FLOW PRESETS
 # ==============================================================================
 PRESETS = {
     "benign": {
-        "title": "🛡️ Normal Web Surfing",
+        "title": "🛡️ Clean Web Traffic",
+        "desc": "Encrypted HTTPS session",
         "protocol": "tcp",
         "service": "https",
         "state": "established",
@@ -189,7 +323,8 @@ PRESETS = {
         "unique_dst_ports": 1,
     },
     "dos": {
-        "title": "🌊 SYN Flood (DoS Attack)",
+        "title": "🌊 SYN Flood DoS",
+        "desc": "Volumetric denial-of-service",
         "protocol": "tcp",
         "service": "http",
         "state": "syn_sent",
@@ -204,7 +339,8 @@ PRESETS = {
         "unique_dst_ports": 1,
     },
     "port_scan": {
-        "title": "🕵️ Stealth Port Reconnaissance",
+        "title": "🕵️ Port Scan Sweep",
+        "desc": "Host & port reconnaissance",
         "protocol": "tcp",
         "service": "other",
         "state": "reset",
@@ -219,7 +355,8 @@ PRESETS = {
         "unique_dst_ports": 185,
     },
     "brute_force": {
-        "title": "💥 SSH Credential Spraying",
+        "title": "💥 SSH Brute Force",
+        "desc": "Credential spray attack",
         "protocol": "tcp",
         "service": "ssh",
         "state": "established",
@@ -234,7 +371,8 @@ PRESETS = {
         "unique_dst_ports": 1,
     },
     "probe": {
-        "title": "📡 Host Sweep / Multi-Target Probe",
+        "title": "📡 Subnet Probe",
+        "desc": "ICMP / ping mapping",
         "protocol": "icmp",
         "service": "other",
         "state": "established",
@@ -250,136 +388,121 @@ PRESETS = {
     },
 }
 
-# Initialize session state for input fields
+# Ensure session state variables exist
 default_preset = PRESETS["benign"]
 for param, val in default_preset.items():
-    if param != "title" and f"flow_{param}" not in st.session_state:
+    if param not in ["title", "desc"] and f"flow_{param}" not in st.session_state:
         st.session_state[f"flow_{param}"] = val
 
-def apply_preset(preset_key: str):
-    """Callback to instantly update all telemetry sliders and inputs."""
-    target = PRESETS[preset_key]
+def load_preset(key: str):
+    """Callback to quickly fill input parameters."""
+    target = PRESETS[key]
     for param, val in target.items():
-        if param != "title":
+        if param not in ["title", "desc"]:
             st.session_state[f"flow_{param}"] = val
 
 # ==============================================================================
-# DATABASE CONNECTIVITY & SYSTEM STATUS
+# DATABASE STATUS CHECK
 # ==============================================================================
 db_online = False
-db_error_msg = ""
 ping_ms = 0.0
-
 try:
     t0 = time.perf_counter()
     ping()
     ping_ms = (time.perf_counter() - t0) * 1000.0
     db_online = True
-except MongoUnavailableError as e:
+except MongoUnavailableError:
     db_online = False
-    db_error_msg = str(e)
 
 # ==============================================================================
-# TOP STATUS NAVBAR & KPIS
+# HEADER HERO BAR
 # ==============================================================================
-top_col1, top_col2 = st.columns([2.5, 1.5])
-with top_col1:
-    st.markdown(
-        """
-        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 4px;">
-            <span style="font-size: 2.2rem;">🛡️</span>
+st.markdown(
+    f"""
+    <div class="hero-glass">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
             <div>
-                <h1 style="margin: 0; font-size: 1.85rem; line-height: 1.2;">ThreatLens AI</h1>
-                <div style="color: #94a3b8; font-size: 0.85rem;">Intelligent Network Intrusion Detection & Traffic Analytics System</div>
+                <div class="brand-title">
+                    <span>🛡️ ThreatLens AI</span>
+                    <span class="brand-badge">SOC Console</span>
+                    <span class="brand-badge" style="border-color: rgba(56,189,248,0.4); color: #7dd3fc;">MongoDB 7.x</span>
+                </div>
+                <div style="color: #94a3b8; font-size: 0.88rem; margin-top: 4px;">
+                    Enterprise Network Intrusion Detection & Flow Volume Intelligence Platform
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 6px 14px; display: flex; align-items: center; font-size: 0.82rem; font-weight: 600;">
+                    {f'<span class="pulse-dot"></span> <span style="color: #10b981;">MongoDB Online</span> &nbsp;<span style="color: #64748b;">({ping_ms:.1f}ms)</span>' if db_online else '<span style="color: #ef4444;">● MongoDB Offline (CSV Mode)</span>'}
+                </div>
+                <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 6px 14px; font-size: 0.82rem; font-weight: 600; color: #cbd5e1;">
+                    ⚡ Random Forest Dual-Engine
+                </div>
             </div>
         </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
-with top_col2:
-    if db_online:
-        st.markdown(
-            f"""
-            <div style="display: flex; justify-content: flex-end; align-items: center; gap: 10px; padding-top: 10px;">
-                <span class="status-pill-online">● MongoDB 7.x Connected</span>
-                <span style="background: rgba(6, 182, 212, 0.1); color: #06b6d4; border: 1px solid rgba(6, 182, 212, 0.25); border-radius: 9999px; padding: 4px 10px; font-size: 0.8rem; font-weight: 600;">
-                    ⚡ {ping_ms:.1f}ms
-                </span>
-                <span style="background: rgba(245, 158, 11, 0.1); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 9999px; padding: 4px 10px; font-size: 0.8rem; font-weight: 600;">
-                    Random Forest Dual-Model
-                </span>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    else:
-        st.markdown(
-            """
-            <div style="display: flex; justify-content: flex-end; align-items: center; gap: 10px; padding-top: 10px;">
-                <span class="status-pill-offline">○ MongoDB Offline</span>
-                <span style="color: #ef4444; font-size: 0.8rem;">CSV Fallback Active</span>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-# Metric Summary Strip
-kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-
-total_records_count = 12000
-total_predictions_count = 0
+# ==============================================================================
+# TOP KPI METRICS STRIP
+# ==============================================================================
+total_records = 12000
+total_predictions = 0
 if db_online:
     try:
         db = get_db()
-        total_records_count = db["traffic_records"].estimated_document_count()
-        total_predictions_count = db["predictions"].estimated_document_count()
+        total_records = db["traffic_records"].estimated_document_count()
+        total_predictions = db["predictions"].estimated_document_count()
     except Exception:
         pass
 
-with kpi1:
+kcol1, kcol2, kcol3, kcol4 = st.columns(4)
+
+with kcol1:
     st.markdown(
         f"""
-        <div class="kpi-container">
-            <div class="kpi-title">Ingested Traffic Flows</div>
-            <div class="kpi-value">{total_records_count:,}</div>
-            <div class="kpi-sub">Indexed in MongoDB Collection</div>
+        <div class="metric-tile">
+            <div class="metric-tile-title">Indexed Traffic Flows</div>
+            <div class="metric-tile-value">{total_records:,}</div>
+            <div class="metric-tile-sub">MongoDB <code>traffic_records</code></div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-with kpi2:
+with kcol2:
     st.markdown(
         """
-        <div class="kpi-container">
-            <div class="kpi-title">Intrusion Classifier Accuracy</div>
-            <div class="kpi-value" style="color: #10b981;">96.42%</div>
-            <div class="kpi-sub">+22.3% over naive baseline (F1: 0.927)</div>
+        <div class="metric-tile">
+            <div class="metric-tile-title">Intrusion Classifier Accuracy</div>
+            <div class="metric-tile-value" style="color: #34d399;">96.42%</div>
+            <div class="metric-tile-sub">+22.3% over naive baseline (F1: 0.927)</div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-with kpi3:
+with kcol3:
     st.markdown(
         """
-        <div class="kpi-container">
-            <div class="kpi-title">Payload Regressor R² Score</div>
-            <div class="kpi-value" style="color: #06b6d4;">0.8954</div>
-            <div class="kpi-sub">MAE: 42.3 KB (83.6% error reduction)</div>
+        <div class="metric-tile">
+            <div class="metric-tile-title">Payload Regressor R² Score</div>
+            <div class="metric-tile-value" style="color: #38bdf8;">0.8954</div>
+            <div class="metric-tile-sub">MAE: 42.3 KB (83.6% error reduction)</div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-with kpi4:
+with kcol4:
     st.markdown(
         f"""
-        <div class="kpi-container">
-            <div class="kpi-title">Live Inferences Logged</div>
-            <div class="kpi-value" style="color: #f59e0b;">{total_predictions_count:,}</div>
-            <div class="kpi-sub">Real-Time Snapshots in Database</div>
+        <div class="metric-tile">
+            <div class="metric-tile-title">Live Predictions Persisted</div>
+            <div class="metric-tile-value" style="color: #a78bfa;">{total_predictions:,}</div>
+            <div class="metric-tile-sub">MongoDB <code>predictions</code> collection</div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -388,182 +511,158 @@ with kpi4:
 st.write("")
 
 # ==============================================================================
-# SIDEBAR NAVIGATION & TELEMETRY CONTROLS
+# SIDEBAR
 # ==============================================================================
 with st.sidebar:
-    st.markdown("### ⚙️ Platform Engine")
+    st.markdown("### 🛡️ System Specifications")
     st.markdown(
         """
-        **Dual ML Pipelines**:
-        - `RandomForestClassifier` (12 features)
-        - `RandomForestRegressor` (10 features)
-        
-        **Database Strategy**:
-        - High-throughput idempotent upserts
-        - Compound B-tree indexes on `(label, attack_type)`
-        - `$lookup` relational joins for drift audit
+        **Architecture**:
+        - **Core DB**: MongoDB 7.x (PyMongo)
+        - **Intrusion Classifier**: Random Forest (200 trees, balanced weights)
+        - **Volume Regressor**: Random Forest (200 trees, total bytes)
+        - **Feature Pipeline**: Scikit-Learn `ColumnTransformer` with zero data leakage
         """
     )
     st.divider()
 
-    st.markdown("### 🔌 Connection Info")
-    st.caption(f"**URI**: `mongodb://127.0.0.1:27017`")
-    st.caption(f"**Database**: `threatlens_db`")
-    st.caption(f"**Collections**: `traffic_records`, `predictions`, `model_metrics`")
+    st.markdown("### 📡 Database Topology")
+    st.caption("Host: `127.0.0.1:27017`")
+    st.caption("Database: `threatlens_db`")
+    st.caption("Collections: `traffic_records`, `predictions`, `model_metrics`")
+    st.caption(f"Cluster Status: {'🟢 Healthy' if db_online else '🔴 Disconnected'}")
 
     if not db_online:
-        st.warning("MongoDB is offline. To connect:\n1. Open CMD as Administrator\n2. Run `net start MongoDB`")
-        if st.button("🔄 Retry Connection"):
+        st.warning("MongoDB is offline.\nRun `net start MongoDB` as Administrator.")
+        if st.button("🔄 Reconnect"):
             st.rerun()
 
     st.divider()
-    st.markdown(
-        """
-        <div style="font-size: 0.8rem; color: #64748b; line-height: 1.4;">
-            <b>ThreatLens AI Enterprise</b><br>
-            Autonomous Network Telemetry & Threat Defense Architecture.
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    st.caption("ThreatLens AI • Intelligent NoSQL Network Defense System")
 
 # ==============================================================================
-# PRIMARY APPLICATION TABS
+# MAIN NAVIGATION TABS
 # ==============================================================================
-tab_predict, tab_records, tab_metrics, tab_queries = st.tabs(
+tab_detect, tab_records, tab_eval, tab_pipeline = st.tabs(
     [
-        "🎯 Real-Time Threat Detector",
-        "📋 MongoDB Flow Explorer",
-        "📊 Model Evaluation & Metrics",
-        "🔍 Aggregation & Query Lab",
+        "⚡ Real-Time Threat Detector",
+        "📁 MongoDB Telemetry Browser",
+        "📈 Model Evaluation & Benchmarks",
+        "🔬 Aggregation & Query Lab",
     ]
 )
 
 # ==============================================================================
-# TAB 1: REAL-TIME THREAT DETECTOR (LIVE INFERENCE)
+# TAB 1: REAL-TIME THREAT DETECTOR
 # ==============================================================================
-with tab_predict:
-    st.markdown(
-        """
-        <div style="margin-bottom: 12px;">
-            <h3 style="margin-bottom: 4px;">⚡ Real-Time Network Flow Inference Engine</h3>
-            <p style="color: #94a3b8; font-size: 0.92rem; margin: 0;">
-                Select a pre-configured attack signature or manually adjust packet telemetry parameters below to perform simultaneous 
-                threat classification and flow volume estimation.
-            </p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+with tab_detect:
+    st.markdown("##### 🚀 Fast Telemetry Presets (One-Click Testing)")
+    st.caption("Select a scenario to populate realistic network flow telemetry:")
 
-    # Telemetry Attack Presets Bar
-    st.markdown("##### 🚀 Quick Telemetry Presets (One-Click Testing)")
-    pcol1, pcol2, pcol3, pcol4, pcol5 = st.columns(5)
-    with pcol1:
+    # Preset selection buttons
+    b1, b2, b3, b4, b5 = st.columns(5)
+    with b1:
         st.button(
-            "🛡️ Normal Browsing",
-            on_click=apply_preset,
+            PRESETS["benign"]["title"],
+            on_click=load_preset,
             args=("benign",),
             use_container_width=True,
-            help="Simulates legitimate HTTPS browsing traffic with balanced packet exchanges and zero failed logins.",
+            help="Typical secure HTTPS browsing session with low SYN ratio.",
         )
-    with pcol2:
+    with b2:
         st.button(
-            "🌊 SYN Flood (DoS)",
-            on_click=apply_preset,
+            PRESETS["dos"]["title"],
+            on_click=load_preset,
             args=("dos",),
             use_container_width=True,
-            help="Simulates a volumetric SYN flood attack with massive packet bursts and 98% SYN flag ratio.",
+            help="High-rate volumetric SYN flood with 98% SYN flag ratio.",
         )
-    with pcol3:
+    with b3:
         st.button(
-            "🕵️ Port Scan",
-            on_click=apply_preset,
+            PRESETS["port_scan"]["title"],
+            on_click=load_preset,
             args=("port_scan",),
             use_container_width=True,
-            help="Simulates reconnaissance multi-port scanning targeting 185+ ports with rejected/reset flags.",
+            help="Reconnaissance scan sweeping across 185+ ports.",
         )
-    with pcol4:
+    with b4:
         st.button(
-            "💥 SSH Brute Force",
-            on_click=apply_preset,
+            PRESETS["brute_force"]["title"],
+            on_click=load_preset,
             args=("brute_force",),
             use_container_width=True,
-            help="Simulates an authentication attack against port 22 with multiple failed login bursts.",
+            help="Repeated SSH authentication failure bursts on port 22.",
         )
-    with pcol5:
+    with b5:
         st.button(
-            "📡 Network Probe",
-            on_click=apply_preset,
+            PRESETS["probe"]["title"],
+            on_click=load_preset,
             args=("probe",),
             use_container_width=True,
-            help="Simulates ICMP echo sweep across distributed subnets.",
+            help="Distributed ICMP ping sweep mapping network topologies.",
         )
 
     st.write("")
 
-    # Form Cards for Input Controls
-    with st.container():
-        icol1, icol2, icol3 = st.columns(3)
+    # Input parameter cards
+    fcol1, fcol2, fcol3 = st.columns(3)
 
-        with icol1:
-            st.markdown(
-                """
-                <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 12px 16px; margin-bottom: 12px;">
-                    <b style="color: #06b6d4;">🌐 Protocol & Connection State</b>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-            protocols = ["tcp", "udp", "icmp"]
-            proto_val = st.session_state.get("flow_protocol", "tcp")
-            st.selectbox("Protocol", protocols, index=protocols.index(proto_val) if proto_val in protocols else 0, key="flow_protocol")
+    with fcol1:
+        st.markdown(
+            """
+            <div class="panel-header">
+                <span>🌐</span> Protocol & Session State
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        protos = ["tcp", "udp", "icmp"]
+        cur_p = st.session_state.get("flow_protocol", "tcp")
+        st.selectbox("Protocol", protos, index=protos.index(cur_p) if cur_p in protos else 0, key="flow_protocol")
 
-            services = ["http", "https", "dns", "ssh", "ftp", "smtp", "other"]
-            serv_val = st.session_state.get("flow_service", "https")
-            st.selectbox("Service Layer", services, index=services.index(serv_val) if serv_val in services else 0, key="flow_service")
+        services = ["http", "https", "dns", "ssh", "ftp", "smtp", "other"]
+        cur_s = st.session_state.get("flow_service", "https")
+        st.selectbox("Service Layer", services, index=services.index(cur_s) if cur_s in services else 0, key="flow_service")
 
-            states = ["established", "syn_sent", "reset", "rejected"]
-            state_val = st.session_state.get("flow_state", "established")
-            st.selectbox("TCP State", states, index=states.index(state_val) if state_val in states else 0, key="flow_state")
+        states = ["established", "syn_sent", "reset", "rejected"]
+        cur_st = st.session_state.get("flow_state", "established")
+        st.selectbox("TCP State", states, index=states.index(cur_st) if cur_st in states else 0, key="flow_state")
 
-            st.number_input("Destination Port", min_value=0, max_value=65535, value=int(st.session_state.get("flow_dst_port", 443)), key="flow_dst_port")
+        st.number_input("Target Port", min_value=0, max_value=65535, value=int(st.session_state.get("flow_dst_port", 443)), key="flow_dst_port")
 
-        with icol2:
-            st.markdown(
-                """
-                <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 12px 16px; margin-bottom: 12px;">
-                    <b style="color: #3b82f6;">⏱️ Traffic Dynamics & Packet Rates</b>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-            st.number_input("Duration (seconds)", min_value=0.001, max_value=3600.0, value=float(st.session_state.get("flow_duration", 2.4)), step=0.1, key="flow_duration")
-            st.number_input("Source Packets (Outbound)", min_value=0, max_value=100000, value=int(st.session_state.get("flow_src_packets", 18)), key="flow_src_packets")
-            st.number_input("Destination Packets (Inbound)", min_value=0, max_value=100000, value=int(st.session_state.get("flow_dst_packets", 25)), key="flow_dst_packets")
-            st.number_input("Connection Rate (conn/sec)", min_value=0.0, max_value=2000.0, value=float(st.session_state.get("flow_conn_rate", 8.0)), step=1.0, key="flow_conn_rate")
+    with fcol2:
+        st.markdown(
+            """
+            <div class="panel-header">
+                <span>⏱️</span> Packet Dynamics & Rate
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        st.number_input("Duration (seconds)", min_value=0.001, max_value=3600.0, value=float(st.session_state.get("flow_duration", 2.4)), step=0.1, key="flow_duration")
+        st.number_input("Source Packets (Outbound)", min_value=0, max_value=100000, value=int(st.session_state.get("flow_src_packets", 18)), key="flow_src_packets")
+        st.number_input("Destination Packets (Inbound)", min_value=0, max_value=100000, value=int(st.session_state.get("flow_dst_packets", 25)), key="flow_dst_packets")
+        st.number_input("Connection Rate (conn/sec)", min_value=0.0, max_value=2000.0, value=float(st.session_state.get("flow_conn_rate", 8.0)), step=1.0, key="flow_conn_rate")
 
-        with icol3:
-            st.markdown(
-                """
-                <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 12px 16px; margin-bottom: 12px;">
-                    <b style="color: #f59e0b;">🔒 Security Heuristics & Flags</b>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-            st.number_input("Time to Live (TTL)", min_value=1, max_value=255, value=int(st.session_state.get("flow_ttl", 64)), key="flow_ttl")
-            st.number_input("Failed Authentication Attempts", min_value=0, max_value=100, value=int(st.session_state.get("flow_failed_logins", 0)), key="flow_failed_logins")
-            st.slider("SYN Flag Ratio (Anomaly Indicator)", min_value=0.0, max_value=1.0, value=float(st.session_state.get("flow_syn_flag_ratio", 0.04)), step=0.01, key="flow_syn_flag_ratio")
-            st.number_input("Unique Destination Ports Contacted", min_value=1, max_value=1000, value=int(st.session_state.get("flow_unique_dst_ports", 1)), key="flow_unique_dst_ports")
+    with fcol3:
+        st.markdown(
+            """
+            <div class="panel-header">
+                <span>🔒</span> Security Heuristics & Anomaly Flags
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        st.number_input("Packet TTL (Time to Live)", min_value=1, max_value=255, value=int(st.session_state.get("flow_ttl", 64)), key="flow_ttl")
+        st.number_input("Failed Authentication Count", min_value=0, max_value=100, value=int(st.session_state.get("flow_failed_logins", 0)), key="flow_failed_logins")
+        st.slider("SYN Flag Ratio (Anomaly Metric)", min_value=0.0, max_value=1.0, value=float(st.session_state.get("flow_syn_flag_ratio", 0.04)), step=0.01, key="flow_syn_flag_ratio")
+        st.number_input("Contacted Unique Dst Ports", min_value=1, max_value=1000, value=int(st.session_state.get("flow_unique_dst_ports", 1)), key="flow_unique_dst_ports")
 
-    # Analyze Button
-    bcol1, bcol2 = st.columns([1, 4])
-    with bcol1:
-        submit_inference = st.button("🚀 Execute Flow Analysis", type="primary", use_container_width=True)
+    st.write("")
+    run_btn = st.button("⚡ Execute Real-Time Threat Analysis", type="primary", use_container_width=True)
 
-    if submit_inference:
-        input_payload = {
+    if run_btn:
+        payload = {
             "protocol": st.session_state["flow_protocol"],
             "service": st.session_state["flow_service"],
             "state": st.session_state["flow_state"],
@@ -578,128 +677,127 @@ with tab_predict:
             "unique_dst_ports": int(st.session_state["flow_unique_dst_ports"]),
         }
 
-        with st.spinner("Executing pipeline through RandomForest Classifier & Regressor..."):
-            try:
-                clf_art, reg_art = load_models()
-                pred = predict_one(
-                    row_dict=input_payload,
-                    clf_artifact=clf_art,
-                    reg_artifact=reg_art,
-                    store=db_online,
-                    source="manual_input",
+        try:
+            clf_art, reg_art = load_models()
+            t_infer_start = time.perf_counter()
+            pred = predict_one(
+                row_dict=payload,
+                clf_artifact=clf_art,
+                reg_artifact=reg_art,
+                store=db_online,
+                source="manual_input",
+            )
+            infer_ms = (time.perf_counter() - t_infer_start) * 1000.0
+
+            prob = pred["attack_probability"]
+            is_malicious = pred["predicted_label"] == 1
+            pred_bytes = pred["predicted_total_bytes"]
+            doc_id = pred.get("prediction_id", "N/A")
+
+            # Verdict Visual Banner
+            if is_malicious:
+                st.markdown(
+                    f"""
+                    <div class="verdict-malicious">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                            <div>
+                                <div style="font-size: 1.4rem; font-weight: 800; color: #f87171;">
+                                    🚨 ALERT: HOSTILE INTRUSION DETECTED
+                                </div>
+                                <div style="color: #cbd5e1; font-size: 0.9rem; margin-top: 4px;">
+                                    Signature indicates malicious attack. Immediate containment recommended.
+                                </div>
+                            </div>
+                            <div style="background: rgba(239, 68, 68, 0.25); border: 1px solid rgba(239, 68, 68, 0.5); border-radius: 9999px; padding: 6px 18px; font-weight: 800; color: #fca5a5; font-size: 1.15rem;">
+                                Attack Probability: {prob*100:.2f}%
+                            </div>
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.markdown(
+                    f"""
+                    <div class="verdict-benign">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                            <div>
+                                <div style="font-size: 1.4rem; font-weight: 800; color: #34d399;">
+                                    🛡️ CLEAR: BENIGN NETWORK FLOW
+                                </div>
+                                <div style="color: #cbd5e1; font-size: 0.9rem; margin-top: 4px;">
+                                    Telemetry conforms to normal network baseline operation.
+                                </div>
+                            </div>
+                            <div style="background: rgba(16, 185, 129, 0.25); border: 1px solid rgba(16, 185, 129, 0.5); border-radius: 9999px; padding: 6px 18px; font-weight: 800; color: #6ee7b7; font-size: 1.15rem;">
+                                Benign Confidence: {(1-prob)*100:.2f}%
+                            </div>
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
                 )
 
-                prob = pred["attack_probability"]
-                is_attack = pred["predicted_label"] == 1
-                pred_bytes = pred["predicted_total_bytes"]
-                pid = pred.get("prediction_id", "N/A")
+            # Dual-Model Outcomes
+            out_col1, out_col2 = st.columns(2)
 
-                # Visual Output Cards
-                st.write("")
-                if is_attack:
-                    st.markdown(
-                        f"""
-                        <div class="threat-banner-malicious">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <div>
-                                    <span style="font-size: 1.3rem; font-weight: 700; color: #ef4444;">🚨 THREAT ALERT: MALICIOUS ATTACK DETECTED</span>
-                                    <div style="color: #cbd5e1; font-size: 0.9rem; margin-top: 4px;">
-                                        High confidence anomaly signature matches hostile cyber attack pattern.
-                                    </div>
-                                </div>
-                                <span style="background: rgba(239, 68, 68, 0.2); color: #fca5a5; font-size: 1.1rem; font-weight: 700; padding: 6px 16px; border-radius: 9999px; border: 1px solid rgba(239,68,68,0.5);">
-                                    Risk Score: {prob*100:.1f}%
-                                </span>
-                            </div>
+            with out_col1:
+                st.markdown(
+                    """
+                    <div class="panel-glass">
+                        <div class="panel-header">🎯 Threat Risk Scoring Engine</div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+                st.progress(prob)
+                st.markdown(
+                    f"""
+                        <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: #94a3b8; margin-top: 8px;">
+                            <span>Classification: <b style="color: {'#f87171' if is_malicious else '#34d399'};">{'Class 1 (Attack)' if is_malicious else 'Class 0 (Normal)'}</b></span>
+                            <span>Latency: <b>{infer_ms:.2f}ms</b></span>
+                            <span>Threshold: <b>0.50</b></span>
                         </div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
-                else:
-                    st.markdown(
-                        f"""
-                        <div class="threat-banner-benign">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <div>
-                                    <span style="font-size: 1.3rem; font-weight: 700; color: #10b981;">🛡️ SECURE: BENIGN TRAFFIC FLOW</span>
-                                    <div style="color: #cbd5e1; font-size: 0.9rem; margin-top: 4px;">
-                                        Flow behavior conforms to standard network operation parameters.
-                                    </div>
-                                </div>
-                                <span style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7; font-size: 1.1rem; font-weight: 700; padding: 6px 16px; border-radius: 9999px; border: 1px solid rgba(16,185,129,0.5);">
-                                    Confidence: {(1-prob)*100:.1f}% Benign
-                                </span>
-                            </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+
+            with out_col2:
+                st.markdown(
+                    f"""
+                    <div class="panel-glass">
+                        <div class="panel-header">📊 Payload Volume Estimation</div>
+                        <div style="font-size: 1.6rem; font-weight: 800; color: #38bdf8; margin-bottom: 4px;">
+                            {pred_bytes:,.0f} <span style="font-size: 1rem; color: #94a3b8; font-weight: 500;">Bytes</span>
                         </div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
-
-                res_col1, res_col2 = st.columns(2)
-
-                with res_col1:
-                    st.markdown(
-                        """
-                        <div class="cyber-card">
-                            <h4 style="margin-top: 0; color: #f8fafc;">🎯 Threat Scoring Breakdown</h4>
-                            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px;">
-                                <span style="color: #94a3b8; font-size: 0.88rem;">Intrusion Likelihood</span>
-                                <span style="font-size: 1.3rem; font-weight: 700; color: {0};">{1:.2f}%</span>
-                            </div>
-                        """.format("#ef4444" if is_attack else "#10b981", prob * 100),
-                        unsafe_allow_html=True,
-                    )
-                    st.progress(prob)
-                    st.markdown(
-                        f"""
-                            <div style="margin-top: 14px; font-size: 0.85rem; color: #94a3b8;">
-                                <b>Model Decision Threshold</b>: 0.50<br>
-                                <b>Classification Outcome</b>: {'Class 1 (Hostile Attack)' if is_attack else 'Class 0 (Normal Flow)'}<br>
-                                <b>Evaluation Latency</b>: &lt; 2.5ms
-                            </div>
+                        <div style="font-size: 0.85rem; color: #94a3b8;">
+                            Estimated Bandwidth: <b>~{pred_bytes/1024:.2f} KB</b> ({pred_bytes/(1024*1024):.4f} MB)<br>
+                            Trained Model: <b>RandomForestRegressor</b> (10 Features)
                         </div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
 
-                with res_col2:
-                    st.markdown(
-                        f"""
-                        <div class="cyber-card">
-                            <h4 style="margin-top: 0; color: #f8fafc;">📊 Payload Volume Regressor</h4>
-                            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px;">
-                                <span style="color: #94a3b8; font-size: 0.88rem;">Predicted Transfer Payload</span>
-                                <span style="font-size: 1.3rem; font-weight: 700; color: #06b6d4;">{pred_bytes:,.0f} Bytes</span>
-                            </div>
-                            <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 10px;">
-                                <b>Equivalent Volume</b>: ~{pred_bytes/1024:.2f} KB ({pred_bytes/(1024*1024):.4f} MB)<br>
-                                <b>Algorithm</b>: RandomForestRegressor (10 Feature Estimator)<br>
-                                <b>Purpose</b>: Real-time network capacity and egress baselining
-                            </div>
-                        </div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
+            if db_online:
+                st.markdown(
+                    f"""
+                    <div style="background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: 8px; padding: 10px 16px; font-size: 0.85rem; color: #c7d2fe;">
+                        💾 <b>Idempotent MongoDB Log</b>: Full feature snapshot and predictions persisted into collection <code>predictions</code> (_id: <code>{doc_id}</code>).
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
 
-                if db_online:
-                    st.markdown(
-                        f"""
-                        <div style="background: rgba(6, 182, 212, 0.08); border: 1px solid rgba(6, 182, 212, 0.25); border-radius: 8px; padding: 10px 16px; font-size: 0.85rem;">
-                            💾 <b>Audit Persistence</b>: Full input vector and model outcomes successfully persisted into MongoDB 
-                            collection <code>predictions</code> with document <code>_id: {pid}</code>.
-                        </div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
+        except Exception as e:
+            st.error(f"Inference Engine Error: {e}")
 
-            except Exception as e:
-                st.error(f"Inference Engine Exception: {e}")
-
+    # Random Sampler Section
     st.markdown("---")
-    st.subheader("🎲 Live Database Flow Sampler")
-    st.caption("Pulls a live random batch of actual flows from the database to test real-world prediction accuracy.")
+    st.markdown("##### 🎲 Live Database Random Sampler")
+    st.caption("Pulls 5 random records from MongoDB and executes live batch prediction:")
 
-    if st.button("Fetch 5 Random Live Records & Predict Batch"):
+    if st.button("Pull 5 Random Flows from Database & Evaluate"):
         try:
             if db_online:
                 db = get_db()
@@ -710,7 +808,7 @@ with tab_predict:
                 df_sample = df_csv.sample(5, random_state=int(time.time()) % 1000)
 
             batch_res = predict_batch(df_sample, store=db_online, source="test_batch")
-            batch_res["predicted_label_name"] = batch_res["predicted_label"].apply(lambda x: "🚨 Attack" if x == 1 else "✅ Benign")
+            batch_res["predicted_label_name"] = batch_res["predicted_label"].apply(lambda x: "🚨 Attack (1)" if x == 1 else "✅ Benign (0)")
             batch_res["attack_probability_pct"] = batch_res["attack_probability"].apply(lambda x: f"{x*100:.1f}%")
             batch_res["predicted_bytes_fmt"] = batch_res["predicted_total_bytes"].apply(lambda x: f"{x:,.0f} B")
             batch_res["actual_bytes_fmt"] = batch_res["actual_total_bytes"].apply(lambda x: f"{x:,.0f} B")
@@ -729,58 +827,52 @@ with tab_predict:
                         "predicted_label_name": "Prediction",
                         "attack_probability_pct": "Attack Prob",
                         "predicted_bytes_fmt": "Est. Payload",
-                        "actual_bytes_fmt": "Ground Truth Payload",
+                        "actual_bytes_fmt": "Ground Truth",
                     }
                 ),
                 use_container_width=True,
             )
         except Exception as e:
-            st.error(f"Batch Sampler Error: {e}")
+            st.error(f"Sampling Error: {e}")
 
 # ==============================================================================
-# TAB 2: MONGODB FLOW EXPLORER & RECORD INSPECTOR
+# TAB 2: MONGODB TELEMETRY BROWSER
 # ==============================================================================
 with tab_records:
-    st.markdown("### 📋 MongoDB Flow Intelligence & Records Browser")
-    st.caption("Inspect live BSON documents stored in the `traffic_records` collection.")
+    st.markdown("### 📁 MongoDB Telemetry Browser")
+    st.caption("Search, filter, and inspect raw BSON flow documents indexed in `traffic_records`.")
 
     if db_online:
         db = get_db()
         col = db["traffic_records"]
 
-        f1, f2, f3, f4 = st.columns([1.5, 1.5, 1.5, 2])
-        with f1:
-            sel_attack = st.selectbox(
-                "Attack Type Filter",
-                ["ALL", "normal", "dos", "port_scan", "brute_force", "probe"],
-            )
-        with f2:
-            sel_service = st.selectbox(
-                "Service Filter",
-                ["ALL", "http", "https", "dns", "ssh", "ftp", "smtp", "other"],
-            )
-        with f3:
-            sel_split = st.selectbox("Partition Split", ["ALL", "train", "test"])
-        with f4:
-            search_id = st.text_input("Search Record ID (e.g. TL-000083)", "")
+        rc1, rc2, rc3, rc4 = st.columns([1.5, 1.5, 1.5, 2])
+        with rc1:
+            f_attack = st.selectbox("Attack Filter", ["ALL", "normal", "dos", "port_scan", "brute_force", "probe"])
+        with rc2:
+            f_service = st.selectbox("Service Filter", ["ALL", "http", "https", "dns", "ssh", "ftp", "smtp", "other"])
+        with rc3:
+            f_split = st.selectbox("Split Partition", ["ALL", "train", "test"])
+        with rc4:
+            f_search = st.text_input("Search Record ID (e.g. TL-000083)", "")
 
-        query = {}
-        if sel_attack != "ALL":
-            query["attack_type"] = sel_attack
-        if sel_service != "ALL":
-            query["service"] = sel_service
-        if sel_split != "ALL":
-            query["split"] = sel_split
-        if search_id.strip():
-            query["record_id"] = search_id.strip()
+        q = {}
+        if f_attack != "ALL":
+            q["attack_type"] = f_attack
+        if f_service != "ALL":
+            q["service"] = f_service
+        if f_split != "ALL":
+            q["split"] = f_split
+        if f_search.strip():
+            q["record_id"] = f_search.strip()
 
-        matched_count = col.count_documents(query)
-        st.write(f"Matched Documents: **{matched_count:,}** (Displaying up to 50)")
+        matched = col.count_documents(q)
+        st.write(f"Matched Documents: **{matched:,}** (Displaying top 50)")
 
-        docs = find_records(filter_query=query, limit=50)
+        docs = find_records(filter_query=q, limit=50)
         if docs:
             df_recs = pd.DataFrame(docs)
-            display_cols = [
+            show_cols = [
                 c
                 for c in [
                     "record_id",
@@ -797,92 +889,79 @@ with tab_records:
                 ]
                 if c in df_recs.columns
             ]
-            st.dataframe(df_recs[display_cols], use_container_width=True)
+            st.dataframe(df_recs[show_cols], use_container_width=True)
 
-            # Interactive BSON Document Inspector
+            # Document Inspector
             st.markdown("---")
             st.markdown("##### 🔬 Raw BSON Document Inspector")
-            rec_options = [d["record_id"] for d in docs]
-            inspected_id = st.selectbox("Select Record to Inspect Raw Document", rec_options)
-            chosen_doc = next((d for d in docs if d["record_id"] == inspected_id), None)
-            if chosen_doc:
-                st.json(chosen_doc)
+            pick_id = st.selectbox("Select Flow Record ID", [d["record_id"] for d in docs])
+            doc_found = next((d for d in docs if d["record_id"] == pick_id), None)
+            if doc_found:
+                st.json(doc_found)
         else:
             st.warning("No records matched the filter criteria.")
     else:
-        st.warning("MongoDB is offline. Displaying local CSV records.")
+        st.warning("MongoDB is offline. Displaying local CSV backup records.")
         if TRAFFIC_CSV_PATH.exists():
             df_csv = pd.read_csv(TRAFFIC_CSV_PATH)
             st.dataframe(df_csv.head(50), use_container_width=True)
 
 # ==============================================================================
-# TAB 3: MODEL EVALUATION & METRICS
+# TAB 3: MODEL EVALUATION & BENCHMARKS
 # ==============================================================================
-with tab_metrics:
-    st.markdown("### 📊 Dual-Model Evaluation & Diagnostic Benchmarks")
-    st.caption("Empirical performance strictly measured on held-out test partition (N=2,400 flows, Seed 42).")
+with tab_eval:
+    st.markdown("### 📈 Model Evaluation & Empirical Benchmarks")
+    st.caption("Performance measured strictly on held-out test split (N=2,400 flows, Seed 42).")
 
     if METRICS_JSON_PATH.exists():
         with open(METRICS_JSON_PATH, "r", encoding="utf-8") as f:
-            mdata = json.load(f)
+            m = json.load(f)
 
-        clf_metrics = mdata["classifier"]["metrics"]
-        reg_metrics = mdata["regressor"]["metrics"]
-        clf_base = mdata["classifier"]["baseline"]
-        reg_base = mdata["regressor"]["baseline"]
+        clf_m = m["classifier"]["metrics"]
+        reg_m = m["regressor"]["metrics"]
+        clf_b = m["classifier"]["baseline"]
+        reg_b = m["regressor"]["baseline"]
 
-        # Classifier KPI Row
         st.markdown("#### 1. Intrusion Classifier (RandomForest)")
         c1, c2, c3, c4 = st.columns(4)
-        c1.metric(
-            "Accuracy",
-            f"{clf_metrics['accuracy']*100:.2f}%",
-            f"+{(clf_metrics['accuracy'] - clf_base['accuracy'])*100:.1f}% vs Baseline",
-        )
-        c2.metric("Precision", f"{clf_metrics['precision']*100:.2f}%")
-        c3.metric("Recall", f"{clf_metrics['recall']*100:.2f}%")
-        c4.metric("F1-Score", f"{clf_metrics['f1']*100:.2f}%")
+        c1.metric("Accuracy", f"{clf_m['accuracy']*100:.2f}%", f"+{(clf_m['accuracy']-clf_b['accuracy'])*100:.1f}% vs Baseline")
+        c2.metric("Precision", f"{clf_m['precision']*100:.2f}%")
+        c3.metric("Recall", f"{clf_m['recall']*100:.2f}%")
+        c4.metric("F1-Score", f"{clf_m['f1']*100:.2f}%")
 
-        # Regressor KPI Row
-        st.markdown("#### 2. Flow Bandwidth Regressor (RandomForest)")
+        st.markdown("#### 2. Flow Volume Regressor (RandomForest)")
         r1, r2, r3 = st.columns(3)
-        r1.metric("R² Determination", f"{reg_metrics['r2']:.4f}", f"Baseline: {reg_base['r2']:.4f}")
-        r2.metric(
-            "Mean Absolute Error (MAE)",
-            f"{reg_metrics['mae']:,.0f} Bytes",
-            f"-{((reg_base['mae'] - reg_metrics['mae'])/reg_base['mae'])*100:.1f}% Error",
-        )
+        r1.metric("R² Score", f"{reg_m['r2']:.4f}", f"Baseline: {reg_b['r2']:.4f}")
+        r2.metric("Mean Absolute Error (MAE)", f"{reg_m['mae']:,.0f} Bytes", f"-{((reg_b['mae']-reg_m['mae'])/reg_b['mae'])*100:.1f}% Error")
         r3.metric("Baseline Strategy", "Mean Estimator")
 
-        st.info(
-            f"📌 **Methodology & Integrity Disclosure**: {mdata['regressor'].get('mandatory_disclosure', '')}"
-        )
+        st.info(f"📌 **Mandatory Methodology Disclosure**: {m['regressor'].get('mandatory_disclosure', '')}")
 
         st.markdown("---")
-        st.markdown("#### 3. Diagnostic Visualizations")
+        st.markdown("#### 3. Diagnostic Plots")
         v1, v2 = st.columns(2)
 
-        cm_img = OUTPUTS_DIR / "confusion_matrix.png"
-        fi_img = OUTPUTS_DIR / "classifier_feature_importance.png"
-        reg_img = OUTPUTS_DIR / "regressor_actual_vs_predicted.png"
+        cm_p = OUTPUTS_DIR / "confusion_matrix.png"
+        fi_p = OUTPUTS_DIR / "classifier_feature_importance.png"
+        reg_p = OUTPUTS_DIR / "regressor_actual_vs_predicted.png"
 
         with v1:
-            if cm_img.exists():
-                st.image(str(cm_img), caption="Intrusion Classifier Confusion Matrix", use_container_width=True)
-            if fi_img.exists():
-                st.image(str(fi_img), caption="Top Predictive Features (Gini Importance)", use_container_width=True)
+            if cm_p.exists():
+                st.image(str(cm_p), caption="Intrusion Detection Confusion Matrix", use_container_width=True)
+            if fi_p.exists():
+                st.image(str(fi_p), caption="Top Predictive Features (Gini Importance)", use_container_width=True)
 
         with v2:
-            if reg_img.exists():
-                st.image(str(reg_img), caption="Flow Bytes: Actual vs. Predicted Correlation", use_container_width=True)
+            if reg_p.exists():
+                st.image(str(reg_p), caption="Flow Payload: Actual vs. Predicted Correlation", use_container_width=True)
             st.markdown(
                 """
-                <div class="cyber-card" style="margin-top: 15px;">
-                    <h5 style="margin-top: 0; color: #f8fafc;">💡 Machine Learning Architecture Insights</h5>
+                <div class="panel-glass">
+                    <div class="panel-header">💡 Machine Learning Architectural Highlights</div>
                     <ul style="color: #94a3b8; font-size: 0.88rem; padding-left: 20px; line-height: 1.6;">
-                        <li><b>Balanced Class Weighting</b>: Mitigates 75/25 normal-to-attack imbalance without synthetic oversampling artifacts.</li>
-                        <li><b>Zero Data Leakage</b>: Feature encoders and imputers fit solely on training split; target variables strictly isolated.</li>
-                        <li><b>Independence Guarantee</b>: Classifier target (<code>label</code>) and Regressor target (<code>total_bytes</code>) operate independently.</li>
+                        <li><b>Balanced Class Weighting</b>: Completely eliminates 75/25 class skew bias without synthetic noise.</li>
+                        <li><b>Zero Data Leakage</b>: Transformers fitted solely on training split; regression features exclude targets & byte columns.</li>
+                        <li><b>Pipeline Independence</b>: Classification and regression models operate on separate feature spaces with isolated targets.</li>
                     </ul>
                 </div>
                 """,
@@ -894,23 +973,23 @@ with tab_metrics:
 # ==============================================================================
 # TAB 4: MONGODB AGGREGATION & QUERY LAB
 # ==============================================================================
-with tab_queries:
-    st.markdown("### 🔍 MongoDB Server-Side Aggregations & B-Tree Indexes")
-    st.caption("Demonstrates high-performance document aggregation pipelines and index scan efficiency.")
+with tab_pipeline:
+    st.markdown("### 🔬 MongoDB Aggregation & Query Lab")
+    st.caption("Demonstrates high-performance server-side aggregation pipelines and B-tree index plans.")
 
     if db_online:
-        q_tab1, q_tab2 = st.columns([1.2, 1])
+        pcol1, pcol2 = st.columns([1.2, 1])
 
-        with q_tab1:
-            st.markdown("##### 1. Traffic Distribution by Attack Type (`$group` Aggregation)")
-            agg_rows = aggregate_by_attack_type()
-            if agg_rows:
-                df_agg = pd.DataFrame(agg_rows)
+        with pcol1:
+            st.markdown("##### 1. Traffic Distribution by Attack Signature (`$group`)")
+            agg_data = aggregate_by_attack_type()
+            if agg_data:
+                df_agg = pd.DataFrame(agg_data)
                 st.dataframe(
                     df_agg.rename(
                         columns={
-                            "attack_type": "Attack Signature",
-                            "flow_count": "Flows",
+                            "attack_type": "Signature",
+                            "flow_count": "Flow Count",
                             "avg_total_bytes": "Avg Bytes",
                             "avg_duration": "Avg Duration(s)",
                             "total_bytes_transferred": "Total Bytes",
@@ -918,33 +997,33 @@ with tab_queries:
                     ),
                     use_container_width=True,
                 )
-                st.bar_chart(df_agg.set_index("attack_type")["flow_count"], color="#06b6d4")
+                st.bar_chart(df_agg.set_index("attack_type")["flow_count"], color="#6366f1")
 
-        with q_tab2:
+        with pcol2:
             st.markdown("##### 2. Real-Time Prediction Audit Aggregation")
-            pred_stats = aggregate_predictions_summary()
+            stats = aggregate_predictions_summary()
             st.markdown(
                 f"""
-                <div class="cyber-card">
-                    <div class="kpi-title">Audit Metrics Snapshot</div>
-                    <div style="font-size: 0.95rem; line-height: 2; margin-top: 8px;">
-                        <b>Total Predictions Logged</b>: {pred_stats['total_predictions']:,}<br>
-                        <b>Malicious Attacks Flagged</b>: <span style="color: #ef4444; font-weight: 700;">{pred_stats['attacks_predicted']:,}</span><br>
-                        <b>Benign Flows Cleared</b>: <span style="color: #10b981; font-weight: 700;">{pred_stats['benign_predicted']:,}</span><br>
-                        <b>Average Attack Probability</b>: {pred_stats['avg_attack_prob']*100:.2f}%
+                <div class="panel-glass">
+                    <div class="panel-header">Live Audit Metrics</div>
+                    <div style="font-size: 0.95rem; line-height: 2;">
+                        <b>Total Predictions Logged</b>: {stats['total_predictions']:,}<br>
+                        <b>Attacks Flagged</b>: <span style="color: #f87171; font-weight: 700;">{stats['attacks_predicted']:,}</span><br>
+                        <b>Benign Flows Cleared</b>: <span style="color: #34d399; font-weight: 700;">{stats['benign_predicted']:,}</span><br>
+                        <b>Mean Attack Probability</b>: {stats['avg_attack_prob']*100:.2f}%
                     </div>
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
 
-            st.markdown("##### 3. Collection Index Directory")
+            st.markdown("##### 3. Collection Index Information")
             db = get_db()
-            for cname in ["traffic_records", "predictions", "model_metrics"]:
-                idxs = db[cname].index_information()
-                with st.expander(f"📁 Collection `{cname}` ({len(idxs)} Indexes)"):
-                    for iname, idoc in idxs.items():
-                        st.write(f"- **{iname}**: `{idoc['key']}` (Unique: `{idoc.get('unique', False)}`)")
+            for col_name in ["traffic_records", "predictions", "model_metrics"]:
+                idxs = db[col_name].index_information()
+                with st.expander(f"📁 `{col_name}` ({len(idxs)} Indexes)"):
+                    for k, v in idxs.items():
+                        st.write(f"- **{k}**: `{v['key']}` (Unique: `{v.get('unique', False)}`)")
 
     else:
-        st.warning("MongoDB is offline. Start the service to execute dynamic aggregation pipelines.")
+        st.warning("MongoDB is offline. Connect MongoDB to execute dynamic aggregation pipelines.")
